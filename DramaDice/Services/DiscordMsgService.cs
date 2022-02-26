@@ -135,7 +135,7 @@ namespace DramaDice.Services
             var fields = new List<Field>();
             foreach (var raiseGroup in raiseGroups)
             {
-                var field = new Field($"Raise {raiseGroup.Id}{CheckRaiseGroupType(raiseGroup)}",
+                var field = new Field($"Raise Group {raiseGroup.Id}{CheckRaiseGroupType(raiseGroup)}",
                     $"[ {string.Join(", ", raiseGroup.DiceSet.Select(d => d.Value))} ]",
                     true);
                 fields.Add(field);
