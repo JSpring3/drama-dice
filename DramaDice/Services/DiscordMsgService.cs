@@ -42,8 +42,8 @@ namespace DramaDice.Services
 
             var embeds = new[]
             {
-                new Embed($"{data.RaiseTotal} Raises", "", 
-                    "https://www.google.com",
+                new Embed($"{data.RaiseTotal} Raises", "",
+                    "https://www.dramadice.app",
                     4818554,
                     fields,
                     author,
@@ -146,7 +146,7 @@ namespace DramaDice.Services
 
         private static Author BuildAuthor(string name, string characterType)
         {
-            return new Author(name, "https://www.google.com", BuildCharacterTypeIconUrl(characterType));
+            return new Author(name, "https://www.dramadice.app", BuildCharacterTypeIconUrl(characterType));
         }
 
         private static string CheckYesOrNo(bool value)
