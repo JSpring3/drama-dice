@@ -1,0 +1,65 @@
+﻿@page "/settings"
+@inject HttpClient _http
+@inject Blazored.LocalStorage.ILocalStorageService _localStorage
+@inject Blazored.LocalStorage.ISyncLocalStorageService _localStorageSync
+@inject IToastService _toastService
+
+
+<PageTitle>Drama Dice | Discord Server Info</PageTitle>
+
+<div class="settings-box">
+    <h2>Discord Info</h2>
+    <div>
+        <div class="input-box">
+            <input type="text" name="web-hook-url" id="web-hook-url" @bind-value="WebHookUrl">
+            <label>WebHook Url</label>
+        </div>
+        <div class="action-buttons">
+            <button class="btn-default" role="button" @onclick="Save">
+                 Save Settings
+            </button >
+        </div>
+    </div>
+</div>
+
+@code {
+
+    protected override async Task OnInitializedAsync()
+    {
+       var webHookUrl = await _localStorage.GetItemAsync<string>(LocalStorage.WEBHOOK);
+
+        if (!string.IsNullOrWhiteSpace(webHookUrl))
+        {
+            WebHookUrl = webHookUrl;
+        }
+        else
+        {
+            _toastService.ShowInfo(WebHookInfoToast.MESSAGE,WebHookInfoToast.TITLE);
+        }
+
+    }
+
+    private void Save()
+    {
+        if (!WebHookUrl.StartsWith(Validation.URL_CHECK_VALUE))
+        {
+            _toastService.ShowError(WebHookErrorToast.MESSAGE,WebHookErrorToast.TITLE );
+
+            return;
+        }
+        if (string.IsNullOrWhiteSpace(WebHookUrl))
+        {
+            _toastService.ShowInfo(WebHookInfoToast.MESSAGE,WebHookInfoToast.TITLE);
+        }
+        else
+        {
+            _toastService.ShowSuccess(WebHookSaveToast.MESSAGE,WebHookSaveToast.TITLE);
+        }
+
+        _localStorageSync.SetItem(LocalStorage.WEBHOOK, WebHookUrl);
+
+    }
+
+    private string WebHookUrl { get; set; } = string.Empty;
+
+}

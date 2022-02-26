@@ -1,0 +1,42 @@
+﻿@inject Blazored.LocalStorage.ILocalStorageService _localStorage
+@inject NavigationManager _navManager
+
+<header class="header" id="header">
+    <nav class="nav container">
+        <NavLink class="nav__logo" href="/" Match="NavLinkMatch.All">
+
+            <img class="img-responsive" src="/img/logo.png"
+                 width="142" height="40" alt="Drama Dice Logo">
+            </NavLink>
+
+        <div class="nav__menu" id="nav-menu">
+
+            <ul class="nav__list">
+                <li class="nav__item">
+                        <NavLink class="nav__link" href="/" Match="NavLinkMatch.All">
+                            <span class="icon-d10 nav__icon"></span>
+                            <span class="nav__name">Roll</span>
+                        </NavLink>
+                    </li>
+
+                    <li class="nav__item">
+                        <NavLink class="nav__link" href="character">
+                            <span class="icon-pirate-coat nav__icon"></span>
+                            <span class="nav__name">Character</span>
+                        </NavLink>
+                    </li>
+
+                <li class="nav__item">
+                    <NavLink class="nav__link" href="settings">
+                        <span class="icon-cog nav__icon"></span>
+                        <span class="nav__name">Settings</span>
+                    </NavLink>
+                </li>
+            </ul>
+        </div>
+    </nav>
+</header>
+
+@code {
+
+}

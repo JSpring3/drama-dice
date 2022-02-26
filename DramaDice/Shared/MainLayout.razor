@@ -1,0 +1,39 @@
+﻿@using Blazored.Toast.Configuration
+@inherits LayoutComponentBase
+
+<MudThemeProvider IsDarkMode="true" />
+<div class="page">
+    <ErrorBoundary>
+        <ChildContent>
+            @Body
+        </ChildContent>
+        <ErrorContent Context="exception">
+            <div class="alert alert-danger">
+                <div class="alert-container">
+                    <div class="alert-icon">
+                        <i class="fa fa-info-circle"></i>
+                    </div>
+
+                    <b class="alert-info">Danger alert:</b> 
+                    @exception.Message
+                </div>
+            </div>
+
+
+        </ErrorContent>
+    </ErrorBoundary>
+</div>
+<NavMenu />
+
+<BlazoredToasts Position="ToastPosition.TopCenter"
+                Timeout="2"
+                ShowCloseButton="true"
+                IconType="IconType.FontAwesome"
+                ShowProgressBar="true"
+                SuccessClass="success-toast-override"
+                ErrorIcon="fa fa-bug" 
+                SuccessIcon="fa fa-check-circle" 
+                RemoveToastsOnNavigation="true"
+                MaxToastCount="3"
+/>
+

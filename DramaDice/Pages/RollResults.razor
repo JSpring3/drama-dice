@@ -1,0 +1,359 @@
+﻿@page "/roll-results"
+@inject HttpClient _http
+@inject Blazored.LocalStorage.ILocalStorageService _localStorage
+@inject IToastService _toastService
+@inject NavigationManager _navManager
+
+@using DramaDice.Models
+@using DramaDice.Services
+
+<PageTitle>Drama Dice | Dice Results</PageTitle>
+
+<div id="title-bar">
+    <div id="raiseTitle1">
+        1 Raise @@ @SuccessTarget
+    </div>
+    <div id="raiseTitle2">
+        2 Raises @@ @(SuccessTarget + 5)
+    </div>
+</div>
+
+<div id="dropBar">
+
+    <div id="raiseGroup1">
+        <Dropzone Items="OneRaiseList" TItem="Die" OnItemDrop="@(SumRaiseGroupOne)" Class="results">
+            <div class="@("dice-result" + (@context.Category == DieCategory.Exploding 
+                            ? " exploding" : "") + (@context.IsLegendary ? " legendary" : ""))">
+                @context.Value
+            </div>
+        </Dropzone>
+    </div>
+
+    <div id="raiseGroup2">
+        <Dropzone Items="TwoRaisesList" TItem="Die" OnItemDrop="@(SumRaiseGroupTwo)" Class="results">
+            <div class="@("dice-result" + (@context.Category == DieCategory.Exploding 
+                            ? " exploding" : "") + (@context.IsLegendary ? " legendary" : ""))">
+                @context.Value
+            </div>
+        </Dropzone>
+    </div>
+</div>
+<div id="grouped-raises">
+
+    <div>
+        @{ var x = 0;}
+        @foreach (var raiseList in SummedGroups)
+        {
+            <MudChip Color="@(raiseList.RaiseGroupingType == GroupingType.Normal ? Color.Success : Color.Primary)" OnClose="RemoveFromSummedGroups"
+                     Text="@string.Join(", ", raiseList.DiceSet.Select(d => d.Value))"
+                     Tag="@x" Class="raiseGroups fadeIn">
+
+            </MudChip>
+            x++;
+        }
+    </div>
+
+</div>
+
+<Dropzone Items="AllDice" TItem="Die" OnItemDrop="@((i)=>LastDropped = i)" Class="results for-dice">
+    <div class="@("dice-result" + (@context.Category == DieCategory.Exploding 
+                    ? " exploding" : "") + (@context.IsLegendary ? " legendary" : ""))">
+        @context.Value
+    </div>
+</Dropzone>
+
+
+<div id="title-bar2">
+    @if (ReRollTotal > 0)
+    {
+        <div id="reRollTitle1">
+            Re-Rolls = @ReRollTotal
+        </div>
+    }
+    else
+    {
+        <div id="reRollTitle1">
+            Re-Rolls
+        </div>
+    }
+
+</div>
+
+<div id="testBar">
+
+    <div id="reRollGroup">
+        <Dropzone Items="ReRollList" TItem="Die" OnItemDrop="@(ReRollDice)" Class="re-roll-zone">
+            <div class="dice-result">
+                @context.Value
+            </div>
+        </Dropzone>
+    </div>
+</div>
+
+<div class="dice__menu" id="dice-menu">
+    <ul class="nav__list">
+        <li>
+            <button class="btn-default" role="button"  @onclick="NewRoll"> New Roll</button >
+        </li>
+
+        <li>
+            @if (RaiseTotal > 0)
+            {
+                <div class="raiseTotal fadeIn">
+                    <MudAlert Severity="Severity.Success" Variant="Variant.Filled"
+                              Dense="false"> @RaiseTotal Raises </MudAlert>
+                </div>
+            }
+
+        </li>
+
+        <li c>
+            <button class="btn-default" role="button" 
+                    @onclick="SendToDiscord" disabled="@DiscordDisabled"> Send Roll</button >
+        </li>
+    </ul>
+</div>
+
+
+@code {
+
+    protected override async Task OnInitializedAsync()
+    {
+        var webHookUrl = await _localStorage.GetItemAsync<string>(LocalStorage.WEBHOOK);
+        var dicePool = await _localStorage.GetItemAsync<int>(LocalStorage.DICE_POOL);
+        var successTarget = await _localStorage.GetItemAsync<int>(LocalStorage.SUCCESS_TARGET);
+        var usePlusOne = await _localStorage.GetItemAsync<bool>(LocalStorage.USE_PLUS_ONE);
+        var useLegendaryTrait = await _localStorage.GetItemAsync<bool>(LocalStorage.USE_LEGENDARY);
+        var useExploding = await _localStorage.GetItemAsync<bool>(LocalStorage.USE_EXPLODE);
+        var characterName = await _localStorage.GetItemAsync<string>(LocalStorage.CHARACTER_NAME);
+        var characterType = await _localStorage.GetItemAsync<string>(LocalStorage.CHARACTER_TYPE);
+
+
+        if (dicePool <= 0 || successTarget <= 0) _navManager.NavigateTo(RouteNames.HOME);
+
+        var result = DiceService.Roll(dicePool, usePlusOne, useExploding, useLegendaryTrait);
+
+        var startingDice = new List<Die>();
+        startingDice.AddRange(result.AllDice);
+
+        DiceRollResults = result;
+        DicePool = dicePool;
+        AllDice = result.AllDice;
+        StartingDice = startingDice;
+        LiveDice = result.LiveDice;
+        ExplodingDice = result.ExplodedDice;
+        SuccessTarget = successTarget;
+        UsePlusOne = usePlusOne;
+        UseExploding = useExploding;
+        UseLegendaryTrait = useLegendaryTrait;
+        CharacterName = characterName;
+        CharacterType = characterType;
+        WebHook = webHookUrl;
+
+        if (string.IsNullOrWhiteSpace(webHookUrl)) DiscordDisabled = true;
+    }
+
+    private void RemoveFromSummedGroups(MudChip chip)
+    {
+        var raiseGroup = SummedGroups[(int)chip.Tag];
+        var diceSet = raiseGroup.DiceSet;
+
+        foreach (var die in diceSet)
+        {
+            die.Status = DieStatus.New;
+        }
+        SummedGroups.Remove(raiseGroup);
+        AllDice.AddRange(diceSet);
+        AllDice = AllDice.OrderByDescending(x => x.Value).ToList();
+        RaiseTotal = CalcRaiseTotal();
+    }
+
+    private int CalcRaiseTotal()
+    {
+        var results = 0;
+        foreach (var raiseGroup in SummedGroups)
+        {
+            if (raiseGroup.RaiseGroupingType == GroupingType.Skilled)
+            {
+                results += 2;
+            }
+            else
+            {
+                results += 1;
+            }
+        }
+        return results;
+    }
+
+    private DiscordMsgData BuildMsgData()
+    {
+        return new DiscordMsgData
+        {
+            UsePlusOne = UsePlusOne,
+            UseExploding = UseExploding,
+            UseLegendary = UseLegendaryTrait,
+            CharacterName = CharacterName,
+            CharacterType = CharacterType,
+            RaiseTotal = RaiseTotal,
+            ReRollTotal = ReRollTotal,
+            DicePool = DicePool,
+            StartingDice = StartingDice,
+            TraitorDice = AllDice,
+            ExplodedDice = ExplodingDice,
+            LiveDice = LiveDice,
+            ReRollHistory = ReRollHistory,
+            ReRollNewValues = ReRollNewValues,
+            SummedGroups = SummedGroups,
+            SuccessTarget = SuccessTarget,
+            SkilledSuccessTarget = SuccessTarget + 5
+        };
+    }
+
+    private async Task SendToDiscord()
+    {
+        var data = BuildMsgData();
+        if (OneRaiseList.Any()) data.TraitorDice.AddRange(OneRaiseList);
+        if (TwoRaisesList.Any()) data.TraitorDice.AddRange(TwoRaisesList);
+
+        var discordMsg = DiscordMsgService.BuildDiscordMessage(data);
+        var webHook = WebHook;
+        
+        using var response = await _http.PostAsJsonAsync(webHook, discordMsg);
+
+
+        if (response.IsSuccessStatusCode)
+        {
+            _toastService.ShowSuccess(SendToDiscordSuccessToast.MESSAGE,SendToDiscordSuccessToast.TITLE);
+        }
+        else
+        {
+            var code = (int)response.StatusCode;
+            _toastService.ShowError($"{SendToDiscordErrorToast.MESSAGE} : Code: {code}",SendToDiscordErrorToast.TITLE);
+        }
+    }
+
+    private void NewRoll()
+    {
+        _navManager.NavigateTo(RouteNames.HOME);
+    }
+
+    private void SumRaiseGroupOne(Die lastDropped)
+    {
+        var dieList = new List<Die>();
+        LastDropped = lastDropped;
+
+        lastDropped.Status = DieStatus.InGroup;
+        var currentRaiseTotal = OneRaiseList.Sum(x => x.Value);
+        if (currentRaiseTotal >= SuccessTarget)
+        {
+            dieList.AddRange(OneRaiseList);
+            var raiseGroup = new RaiseGroup
+            {
+                Id = SummedGroups.Count + 1,
+                RaiseGroupingType = GroupingType.Normal,
+                DiceSet = dieList,
+                SuccessTarget = SuccessTarget
+            };
+
+            SummedGroups.Add(raiseGroup);
+        }
+
+        RaiseTotal = CalcRaiseTotal();
+
+        if (currentRaiseTotal >= SuccessTarget) OneRaiseList.Clear();
+    }
+
+    private void SumRaiseGroupTwo(Die lastDropped)
+    {
+        var dieList = new List<Die>();
+        LastDropped = lastDropped;
+        var skilledSuccessTarget = SuccessTarget + 5;
+
+        lastDropped.Status = DieStatus.InGroup;
+        var currentRaiseTotal = TwoRaisesList.Sum(x => x.Value);
+
+        if (currentRaiseTotal >= skilledSuccessTarget)
+        {
+            dieList.AddRange(TwoRaisesList);
+            var raiseGroup = new RaiseGroup
+            {
+                Id = SummedGroups.Count + 1,
+                RaiseGroupingType = GroupingType.Skilled,
+                DiceSet = dieList,
+                SuccessTarget = skilledSuccessTarget
+            };
+
+            SummedGroups.Add(raiseGroup);
+        }
+
+        RaiseTotal = CalcRaiseTotal();
+
+        if (currentRaiseTotal >= skilledSuccessTarget) TwoRaisesList.Clear();
+    }
+
+    private void ReRollDice(Die lastDropped)
+    {
+        LastDropped = lastDropped;
+        var dieSet = new List<Die>();
+        var result = DiceService.Roll(1, UsePlusOne, UseExploding, false);
+        var idSeed = AllDice.Max(x => x.Id) + 1;
+
+        foreach (var die in result.AllDice)
+        {
+            die.Id = idSeed;
+            dieSet.Add(die);
+            idSeed++;
+        }
+
+        ReRollTotal += 1;
+        ReRollHistory.Add(lastDropped);
+        AllDice.Remove(lastDropped);
+        AllDice.AddRange(dieSet);
+        ReRollNewValues.AddRange(dieSet);
+        AllDice = AllDice.OrderByDescending(x => x.Value).ToList();
+        ReRollList.Clear();
+    }
+    private bool DiscordDisabled { get; set; }
+
+    private string WebHook { get; set; } = string.Empty;
+    private int DicePool { get; set; }
+    private bool UsePlusOne { get; set; }
+    private bool UseExploding { get; set; }
+    private bool UseLegendaryTrait { get; set; }
+    private string CharacterName { get; set; } = string.Empty;
+    private string CharacterType { get; set; } = string.Empty;
+
+    private int SuccessTarget { get; set; }
+
+    // ReSharper disable once UnusedAutoPropertyAccessor.Local
+    private Die? LastDropped { get; set; }
+
+    private int RaiseTotal { get; set; }
+
+    private int ReRollTotal { get; set; }
+
+    public List<Die> OneRaiseList = new();
+
+    public List<Die> TwoRaisesList = new();
+
+    public List<Die> ReRollList = new();
+
+    public List<Die> ReRollHistory = new();
+
+    public List<Die> ReRollNewValues = new();
+
+    public List<Die> AllDice = new();
+
+    public List<Die> StartingDice = new();
+
+    public List<Die> ExplodingDice = new();
+
+    public List<Die> LiveDice = new();
+
+    public Result? DiceRollResults { get; set; }
+    
+    public List<RaiseGroup> SummedGroups { get; set; } = new();
+
+    public List<List<Die>> SummedGroupsTwo { get; set; } = new();
+}
+

@@ -1,0 +1,168 @@
+﻿@page "/character"
+
+@inject NavigationManager _navManager
+@inject Blazored.LocalStorage.ILocalStorageService _localStorage
+@inject Blazored.LocalStorage.ISyncLocalStorageService _localStorageSync
+@inject IToastService _toastService
+
+<PageTitle>Drama Dice | Character Info</PageTitle>
+
+<div class="settings-box">
+    <h2>Character</h2>
+    <div>
+        <div class="stepper-input">
+            <MudRadioGroup @bind-SelectedOption="@CharacterType">
+                <MudRadio Option="@("Hero")" Color="Color.Primary" Dense="true">Hero</MudRadio>
+                <MudRadio Option="@("Villain")" Color="Color.Secondary" Dense="true">Villain</MudRadio>
+                <MudRadio Option="@("NPC")" Color="Color.Tertiary" Dense="true">NPC</MudRadio>
+            </MudRadioGroup>
+        </div>
+
+            <h3 style="margin-top: 10px;">Hero Points</h3>
+        <div class="stepper-input">
+            <button class="btn btn-left" @onclick="DecreaseHeroPoints"
+                    @onclick:preventDefault="true">-</button>
+            <input type="number" @bind-value="HeroPoints" class="number-box"/>
+            <button class="btn btn-right" @onclick="IncreaseHeroPoints"
+                    @onclick:preventDefault="true">+</button>
+            <button class="btn btn-right" role="button" @onclick="ResetHeroPoints">
+                <i class="fa fa-refresh" aria-hidden="true"></i>
+            </button >
+        </div>
+        <h3 style="margin-top: 10px;">Wealth</h3>
+        <div class="stepper-input">
+            <button class="btn btn-left" @onclick="DecreaseWealth"
+                    @onclick:preventDefault="true">-</button>
+            <input type="number" @bind-value="Wealth" class="number-box"/>
+            <button class="btn btn-right" @onclick="IncreaseWealth"
+                    @onclick:preventDefault="true">+</button>
+            <button class="btn btn-right" role="button"
+                    @onclick="ResetWealth">
+                <i class="fa fa-refresh" aria-hidden="true"></i>
+            </button >
+        </div>
+        <div class="input-box" style="margin-top: 10px;">
+            <input type="text" name="" @bind-value="CharacterName">
+            <label>Character Name</label>
+        </div>
+
+            <div class="action-buttons">
+                <button class="btn-default" role="button" @onclick="Save"> Save Settings</button >
+            </div>
+        </div>
+</div>
+
+@code {
+
+    protected override async Task OnInitializedAsync()
+    {
+        var characterName = await _localStorage.GetItemAsync<string>(LocalStorage.CHARACTER_NAME);
+        var characterType = await _localStorage.GetItemAsync<string>(LocalStorage.CHARACTER_TYPE);
+        var heroPoints = await _localStorage.GetItemAsync<int>(LocalStorage.HERO_POINTS);
+        var wealth = await _localStorage.GetItemAsync<int>(LocalStorage.WEALTH);
+
+        if (!string.IsNullOrWhiteSpace(characterName))
+        {
+            CharacterName = characterName;
+        }
+        if (!string.IsNullOrWhiteSpace(characterType))
+        {
+            CharacterType = characterType;
+        }
+        else
+        {
+            await _localStorage.SetItemAsync(LocalStorage.CHARACTER_NAME, "Justin Case");
+            await _localStorage.SetItemAsync(LocalStorage.CHARACTER_TYPE, "Hero");
+        }
+
+        HeroPoints = heroPoints;
+        Wealth = wealth;
+
+    }
+
+    private void Save()
+    {
+        if (string.IsNullOrWhiteSpace(CharacterName))
+        {
+            _toastService.ShowError("Character Name can not be blank","Character Name");
+        }
+        else
+        {    _localStorageSync.SetItem(LocalStorage.CHARACTER_NAME, CharacterName);
+            _localStorageSync.SetItem(LocalStorage.CHARACTER_TYPE, CharacterType);
+            _toastService.ShowSuccess("Character Info Saved!","Success");
+        }
+
+    }
+
+    private void IncreaseHeroPoints()
+    {
+        HeroPoints ++;
+        _localStorageSync.SetItem(LocalStorage.HERO_POINTS, HeroPoints);
+    }
+
+    private void IncreaseWealth()
+    {
+        Wealth ++;
+        _localStorageSync.SetItem(LocalStorage.WEALTH, Wealth);
+    }
+
+    private void DecreaseHeroPoints()
+    {
+        HeroPoints--;
+        _localStorageSync.SetItem(LocalStorage.HERO_POINTS, HeroPoints);
+    }
+
+    private void DecreaseWealth()
+    {
+        Wealth--;
+        _localStorageSync.SetItem(LocalStorage.WEALTH, Wealth);
+    }
+
+    private void ResetHeroPoints()
+    {
+        HeroPoints = 0;
+        _localStorageSync.SetItem(LocalStorage.HERO_POINTS, HeroPoints);
+    }
+
+    private void ResetWealth()
+    {
+        Wealth = 0;
+        _localStorageSync.SetItem(LocalStorage.WEALTH, Wealth);
+    }
+
+    private static int HeroPointsMinMax(int value)
+    {
+        return value switch
+        {
+            >= 50 => 50,
+            <= 1 => 1,
+            _ => value
+            };
+    }
+
+    private static int WealthMinMax(int value)
+    {
+        return value switch
+        {
+            >= 50 => 50,
+            <= 0 => 0,
+            _ => value
+            };
+    }
+
+    private string CharacterName { get; set; } = "Justin Case";
+    private string CharacterType { get; set; } = "Hero";
+    private int HeroPoints
+    {
+        get => _heroPoints;
+        set => _heroPoints = HeroPointsMinMax(value);
+    }
+    private int Wealth
+    {
+        get => _wealth;
+        set => _wealth = WealthMinMax(value);
+    }
+
+    private int _heroPoints;
+    private int _wealth;
+}

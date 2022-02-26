@@ -1,0 +1,129 @@
+﻿@page "/"
+@inject Blazored.LocalStorage.ILocalStorageService _localStorage
+@inject Blazored.LocalStorage.ISyncLocalStorageService _localStorageSync
+@inject NavigationManager _navManager
+
+
+<PageTitle>Drama Dice | Dice Settings</PageTitle>
+
+<div class="settings-box">
+    <h2>Dice Options</h2>
+    <h3># of Dice</h3>
+    <div class="stepper-input">
+        <button class="btn btn-left" @onclick="RemoveDice"  @onclick:preventDefault="true" >-</button>
+        <input type="number"  @bind-value="DiceCount"  class="number-box"/>
+        <button class="btn btn-right" @onclick="AddDice"  @onclick:preventDefault="true" >+</button>
+    </div>
+    
+    <div class="toggle-collection">
+        <MudSwitch @bind-Checked="@PlusOne" Label="@("Plus One Dice : " + (PlusOne ? "On" : "Off"))" 
+                   Color="Color.Success"></MudSwitch>
+    </div>
+    <div class="toggle-collection">
+        <MudSwitch @bind-Checked="@LegendaryTrait" Color="Color.Success" 
+                   Label="@("Legendary Trait : " + (LegendaryTrait ? "On" : "Off"))"></MudSwitch>
+    </div>
+    <div class="toggle-collection">
+        <MudSwitch @bind-Checked="@ExplodingDice" Color="Color.Success" 
+                   Label="@("Exploding Dice : " + (ExplodingDice ? "On" : "Off"))"></MudSwitch>
+    </div>
+    <h3 style="margin-top: 10px;">Success Target</h3>
+    <div class="stepper-input">
+        <button class="btn btn-left" @onclick="DecreaseTarget"  @onclick:preventDefault="true" >-</button>
+        <input type="number"  @bind-value="SuccessTarget"  class="number-box"/>
+        <button class="btn btn-right" @onclick="IncreaseTarget"  @onclick:preventDefault="true" >+</button>
+    </div>
+
+    <div class="action-buttons">
+        <NavLink class="nav__link" href="roll-results">
+            <button class="btn-default" role="button" @onclick="RollDice"> Roll Dice</button >
+        </NavLink>
+    </div>
+</div>
+
+@code {
+
+    protected override async Task OnInitializedAsync()
+    {
+        PlusOne = await _localStorage.GetItemAsync<bool>(LocalStorage.USE_PLUS_ONE);
+        LegendaryTrait = await _localStorage.GetItemAsync<bool>(LocalStorage.USE_LEGENDARY);
+        ExplodingDice = await _localStorage.GetItemAsync<bool>(LocalStorage.USE_EXPLODE);
+
+        var dicePool = await _localStorage.GetItemAsync<int>(LocalStorage.DICE_POOL);
+        DiceCount = dicePool == 0 ? 6 : dicePool;
+
+        var successTarget = await _localStorage.GetItemAsync<int>(LocalStorage.SUCCESS_TARGET);
+        SuccessTarget = successTarget == 0 ? 10 : successTarget;
+
+       // await _localStorage.ClearAsync();
+    }
+
+    protected void RollDice()
+    {
+         _localStorageSync.SetItem(LocalStorage.DICE_POOL, DiceCount);
+         _localStorageSync.SetItem(LocalStorage.SUCCESS_TARGET, SuccessTarget);
+         _localStorageSync.SetItem(LocalStorage.USE_PLUS_ONE, PlusOne);
+         _localStorageSync.SetItem(LocalStorage.USE_EXPLODE, ExplodingDice);
+         _localStorageSync.SetItem(LocalStorage.USE_LEGENDARY, LegendaryTrait);
+    }
+
+    private int DiceCount
+    {
+        get => _diceCount;
+        set => _diceCount = DiceMinMax(value);
+    }
+
+    private int SuccessTarget
+    {
+        get => _successTarget;
+        set => _successTarget = TargetMinMax(value);
+    }
+    private int _diceCount = 6;
+    private int _successTarget = 10;
+
+    private bool PlusOne { get; set; }
+    private bool LegendaryTrait { get; set; }
+    private bool ExplodingDice { get; set; }
+
+    private static int DiceMinMax(int value)
+    {
+        return value switch
+        {
+            >= 40 => 40,
+            <= 1 => 1,
+            _ => value
+            };
+    }
+
+    private static int TargetMinMax(int value)
+    {
+        return value switch
+        {
+            >= 50 => 50,
+            <= 5 => 5,
+            _ => value
+            };
+    }
+
+    private void AddDice()
+    {
+        DiceCount++;
+    }
+
+    private void IncreaseTarget()
+    {
+        SuccessTarget += 5;
+    }
+
+    private void RemoveDice()
+    {
+        DiceCount-- ;
+    }
+
+    private void DecreaseTarget()
+    {
+        SuccessTarget -= 5;
+    }
+
+}
+
