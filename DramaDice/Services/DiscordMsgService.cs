@@ -25,7 +25,7 @@ namespace DramaDice.Services
 
             var embeds = new[]
             {
-                new Embed($"{data.RaiseTotal} Raises", "", 
+                new Embed($"{data.RaiseTotal} Raises with {data.TraitorDice.Count} Traitor Dice", "", 
                     "https://www.google.com",
                     4818554,
                     fields,
