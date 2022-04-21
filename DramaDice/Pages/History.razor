@@ -1,0 +1,45 @@
+﻿@page "/history"
+@using DramaDice.Models
+@using System.Text.Json
+
+@inject NavigationManager _navManager
+@inject Blazored.LocalStorage.ILocalStorageService _localStorage
+@inject Blazored.LocalStorage.ISyncLocalStorageService _localStorageSync
+@inject IToastService _toastService
+
+<PageTitle>Drama Dice | History</PageTitle>
+
+<div class="settings-box">
+    <h2>Last 20 Rolls Sent</h2>
+        <ul>
+        @foreach (var msg in SentRolls.Messages)
+        {
+          <li>
+              <b>Dice Pool:&nbsp; <span style="color: white; margin-right:25px;">@msg.DicePool</span> </b> 
+              <b>Raises:&nbsp;<span style="color: lime;margin-right:25px;">@msg.RaiseTotal</span>  </b>
+              <b>Traitors:&nbsp; <span style="color: red;margin-right:25px;">@msg.TraitorDice.Count</span>  </b>
+               <b>Rerolls:&nbsp; <span style="color: yellow;margin-right:25px;">@msg.ReRollTotal</span>  </b>
+              <b>Success Target:&nbsp; <span style="color: aqua;margin-right:25px;">@msg.SuccessTarget</span>  </b>
+          </li>
+        }
+        </ul>
+</div>
+
+@code {
+
+    protected override async Task OnInitializedAsync()
+    {
+        var rollHistoryData = await _localStorage.GetItemAsync<string>(LocalStorage.ROLL_HISTORY);
+        var rollHistory = new RollHistory { Messages = new List<DiscordMsgData>() };
+        
+        if (!string.IsNullOrWhiteSpace(rollHistoryData))
+        {
+            rollHistory = JsonSerializer.Deserialize<RollHistory>(rollHistoryData);
+        }
+        SentRolls = rollHistory;
+    }
+
+    private RollHistory SentRolls { get; set; } = new();
+
+
+}

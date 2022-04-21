@@ -19,6 +19,6 @@ public class DiscordMsgData
     public List<Die> ReRollNewValues { get; set; } = new();
     public List<Die> TraitorDice { get; set; } = new();
     public List<RaiseGroup> SummedGroups { get; set; } = new();
-
+    
 
 }

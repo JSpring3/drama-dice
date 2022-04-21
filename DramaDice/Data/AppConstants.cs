@@ -51,6 +51,7 @@ public static class LocalStorage
     public const string USE_EXPLODE = "useExplode";
     public const string HERO_POINTS = "heroPoints";
     public const string WEALTH = "wealth";
+    public const string ROLL_HISTORY = "rollHistory";
 }
 
 public static class Validation

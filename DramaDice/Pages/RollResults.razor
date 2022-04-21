@@ -6,6 +6,7 @@
 
 @using DramaDice.Models
 @using DramaDice.Services
+@using System.Text.Json
 
 <PageTitle>Drama Dice | Dice Results</PageTitle>
 
@@ -215,7 +216,24 @@
         if (OneRaiseList.Any()) data.TraitorDice.AddRange(OneRaiseList);
         if (TwoRaisesList.Any()) data.TraitorDice.AddRange(TwoRaisesList);
 
+        var rollHistoryData = await _localStorage.GetItemAsync<string>(LocalStorage.ROLL_HISTORY);
+        var rollHistory = new RollHistory { Messages = new List<DiscordMsgData>() };
+
+        if (!string.IsNullOrWhiteSpace(rollHistoryData))
+        {
+            rollHistory = JsonSerializer.Deserialize<RollHistory>(rollHistoryData);
+        }
+        if (rollHistory.Messages.Count == 20)
+        {
+            rollHistory.Messages.RemoveAt(0);
+        }
+
         var discordMsg = DiscordMsgService.BuildDiscordMessage(data);
+        rollHistory?.Messages.Add(data);
+        var strData = JsonSerializer.Serialize(rollHistory);
+        
+        await _localStorage.SetItemAsync(LocalStorage.ROLL_HISTORY,strData);
+
         var webHook = WebHook;
         
         using var response = await _http.PostAsJsonAsync(webHook, discordMsg);
