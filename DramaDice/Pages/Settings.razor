@@ -9,6 +9,12 @@
 
 <div class="settings-box">
     <h2>Discord Info</h2>
+            <div class="stepper-input">
+            <MudRadioGroup @bind-SelectedOption="@MsgType">
+                <MudRadio Option="@("Simple")" Color="Color.Primary" Dense="true">Simple</MudRadio>
+                <MudRadio Option="@("Detailed")" Color="Color.Secondary" Dense="true">Detailed</MudRadio>
+            </MudRadioGroup>
+        </div>
     <div>
         <div class="input-box">
             <input type="text" name="web-hook-url" id="web-hook-url" @bind-value="WebHookUrl">
@@ -26,7 +32,8 @@
 
     protected override async Task OnInitializedAsync()
     {
-       var webHookUrl = await _localStorage.GetItemAsync<string>(LocalStorage.WEBHOOK);
+        var webHookUrl = await _localStorage.GetItemAsync<string>(LocalStorage.WEBHOOK);
+        var msgType = await _localStorage.GetItemAsync<string>(LocalStorage.MSG_TYPE);
 
         if (!string.IsNullOrWhiteSpace(webHookUrl))
         {
@@ -35,13 +42,14 @@
         else
         {
             _toastService.ShowInfo(WebHookInfoToast.MESSAGE,WebHookInfoToast.TITLE);
+            await _localStorage.SetItemAsync(LocalStorage.MSG_TYPE, "Simple");
         }
 
     }
 
     private void Save()
     {
-        if (!WebHookUrl.StartsWith(Validation.URL_CHECK_VALUE))
+        if (!WebHookUrl.StartsWith(Validation.URL_CHECK_VALUE_DISCORD) && !WebHookUrl.StartsWith(Validation.URL_CHECK_VALUE_GUILDED))
         {
             _toastService.ShowError(WebHookErrorToast.MESSAGE,WebHookErrorToast.TITLE );
 
@@ -57,9 +65,12 @@
         }
 
         _localStorageSync.SetItem(LocalStorage.WEBHOOK, WebHookUrl);
+        _localStorageSync.SetItem(LocalStorage.MSG_TYPE, MsgType);
 
     }
 
     private string WebHookUrl { get; set; } = string.Empty;
+
+    private string MsgType { get; set; } = "Simple";
 
 }

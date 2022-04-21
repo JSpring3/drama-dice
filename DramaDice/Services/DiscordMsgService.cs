@@ -5,7 +5,7 @@ namespace DramaDice.Services
 {
     public static class DiscordMsgService
     {
-        public static DiscordMessage BuildDiscordMessage(DiscordMsgData data)
+        public static DiscordMessage BuildDiscordMessage(DiscordMsgData data, string msgType = "Simple")
         {
             var explodedDiceFromReRolls = data.ReRollNewValues
                 .Where(x => x.Category == DieCategory.Exploding).ToList();
@@ -15,24 +15,7 @@ namespace DramaDice.Services
                 data.ExplodedDice.AddRange(explodedDiceFromReRolls);
             }
 
-            var fields = new List<Field>
-            {
-                BuildSuccessTarget(data.SuccessTarget),
-                BuildDicePool(data.DicePool),
-                BuildAllResultList(data.StartingDice),
-                BuildLiveResultList(data.LiveDice),
-                BuildUsePlusOne(data.UsePlusOne),
-                BuildUseLegendaryTrait(data.UseLegendary),
-                BuildUseExplodingDice(data.UseExploding),
-                BuildExplodingDiceCount(data.ExplodedDice.Count),
-                BuildExplodingResultList(data.ExplodedDice),
-                BuildHasRerolledDice(data.ReRollHistory),
-                BuildReRolledDiceCount(data.ReRollTotal),
-                BuildReRollHistoryList(data.ReRollHistory),
-                BuildReRollNewValuesList(data.ReRollNewValues),
-                BuildHasTraitorDice(data.TraitorDice),
-                BuildTraitorDice(data.TraitorDice)
-            };
+            var fields = BuildFieldList(data, msgType).ToList();
 
             fields.AddRange(BuildRaiseGroups(data.SummedGroups));
 
@@ -42,8 +25,8 @@ namespace DramaDice.Services
 
             var embeds = new[]
             {
-                new Embed($"{data.RaiseTotal} Raises", "",
-                    "https://www.dramadice.app",
+                new Embed($"{data.RaiseTotal} Raises", "", 
+                    "https://www.google.com",
                     4818554,
                     fields,
                     author,
@@ -51,6 +34,40 @@ namespace DramaDice.Services
             };
 
             return new DiscordMessage(embeds);
+        }
+
+        private static IEnumerable<Field> BuildFieldList(DiscordMsgData data,string msgType)
+        {
+            if (msgType != "Simple")
+            {
+               return new List<Field>
+                    {
+                        BuildSuccessTarget(data.SuccessTarget),
+                        BuildDicePool(data.DicePool),
+                        BuildAllResultList(data.StartingDice),
+                        BuildLiveResultList(data.LiveDice),
+                        BuildUsePlusOne(data.UsePlusOne),
+                        BuildUseLegendaryTrait(data.UseLegendary),
+                        BuildUseExplodingDice(data.UseExploding),
+                        BuildExplodingDiceCount(data.ExplodedDice.Count),
+                        BuildExplodingResultList(data.ExplodedDice),
+                        BuildHasRerolledDice(data.ReRollHistory),
+                        BuildReRolledDiceCount(data.ReRollTotal),
+                        BuildReRollHistoryList(data.ReRollHistory),
+                        BuildReRollNewValuesList(data.ReRollNewValues),
+                        BuildHasTraitorDice(data.TraitorDice),
+                        BuildTraitorDice(data.TraitorDice)
+                    };
+            }
+
+            return new List<Field>
+                    {
+                        BuildSuccessTarget(data.SuccessTarget),
+                        BuildDicePool(data.DicePool),
+                        BuildAllResultList(data.StartingDice),
+                        BuildTraitorDice(data.TraitorDice)
+                    };
+
         }
 
         private static Field BuildSuccessTarget(int value)
@@ -135,7 +152,7 @@ namespace DramaDice.Services
             var fields = new List<Field>();
             foreach (var raiseGroup in raiseGroups)
             {
-                var field = new Field($"Raise Group {raiseGroup.Id}{CheckRaiseGroupType(raiseGroup)}",
+                var field = new Field($"Raise {raiseGroup.Id}{CheckRaiseGroupType(raiseGroup)}",
                     $"[ {string.Join(", ", raiseGroup.DiceSet.Select(d => d.Value))} ]",
                     true);
                 fields.Add(field);
@@ -146,7 +163,7 @@ namespace DramaDice.Services
 
         private static Author BuildAuthor(string name, string characterType)
         {
-            return new Author(name, "https://www.dramadice.app", BuildCharacterTypeIconUrl(characterType));
+            return new Author(name, "https://www.google.com", BuildCharacterTypeIconUrl(characterType));
         }
 
         private static string CheckYesOrNo(bool value)
