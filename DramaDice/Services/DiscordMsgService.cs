@@ -67,6 +67,7 @@ namespace DramaDice.Services
                         BuildAllResultList(data.StartingDice),
                         BuildTraitorDice(data.TraitorDice),
                         BuildReRolledDiceCount(data.ReRollTotal),
+                        BuildReRollNewValuesList(data.ReRollNewValues),
                     };
 
         }
